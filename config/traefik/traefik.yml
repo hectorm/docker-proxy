@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://json.schemastore.org/traefik-v2.json
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+entryPoints:
+  http:
+    address: ":80/tcp"
+  https:
+    address: ":443/tcp"
+  smtps:
+    address: ":465/tcp"
+  smtp-starttls:
+    address: ":587/tcp"
+providers:
+  file:
+    directory: "/etc/traefik/dynamic/"
+    watch: true
+ping: { }
