@@ -1,6 +1,6 @@
 # syntax=docker.io/docker/dockerfile:1
 
-FROM docker.io/traefik:2.10.6@sha256:1957e3314f435c85b3a19f7babd53c630996aa1af65d1f479d75539251b1e112
+FROM docker.io/traefik:2.10.7@sha256:c5181ddf303f1ccfd4bd6d1d9c4867b0500efb6089a0f9ccb16612438f6e934f
 
 COPY ./config/traefik/ /etc/traefik/
 COPY ./entrypoint.sh /entrypoint.sh
