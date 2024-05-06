@@ -11,20 +11,20 @@ services:
       private:
 
   proxy:
-    image: "docker.io/hectorm/proxy:v1"
+    image: "docker.io/hectorm/proxy:v2"
     networks:
       public:
       private:
         aliases:
           - "example.com"
-          - "example.net"
           - "smtp.example.com"
+          - "postgres.example.com"
     environment:
-      PROXY_UPSTREAMS_HTTPS: |
-        example.com
-        example.net
-      PROXY_UPSTREAMS_SMTPS: |
-        smtp.example.com
+      PROXY_UPSTREAMS: |
+        example.com:443
+        smtp.example.com:465
+        smtp.example.com:587:catchall
+        postgres.example.com:5432
 
 networks:
 

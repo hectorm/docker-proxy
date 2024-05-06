@@ -13,6 +13,16 @@ if [ -n "${RESOLVCONF_PATH:-}" ] && touch "${RESOLVCONF_PATH:?}" 2>/dev/null; th
 	EOF
 fi
 
+# Define the Traefik entrypoints.
+_IFS=${IFS}; IFS=",$(printf '\nx')"; IFS=${IFS%x}
+for upstream in ${PROXY_UPSTREAMS?}; do
+	port=$(printf '%s' "${upstream:?}" | cut -d: -f2)
+
+	export "TRAEFIK_ENTRYPOINTS_port${port:?}"="true"
+	export "TRAEFIK_ENTRYPOINTS_port${port:?}_ADDRESS"=":${port:?}/tcp"
+done
+IFS=$_IFS
+
 # If the first arg is "-f" or "--some-option", or our command is a valid Traefik subcommand,
 # let's invoke it through Traefik instead.
 if [ "${1#-}" != "${1:?}" ] || traefik "${1:?}" --help >/dev/null 2>&1; then

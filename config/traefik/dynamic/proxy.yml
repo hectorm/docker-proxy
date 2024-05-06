@@ -1,57 +1,36 @@
 # yaml-language-server: $schema=https://json.schemastore.org/traefik-v2-file-provider.json
-# {{ if env "PROXY_UPSTREAMS_HTTPS" }}
-http:
-  routers:
-    https-redirect:
-      rule: 'PathPrefix(`/`)'
-      entryPoints: ["http"]
-      middlewares: ["https-redirect"]
-      service: "noop@internal"
-  middlewares:
-    https-redirect:
-      redirectScheme:
-        scheme: "https"
-        permanent: true
-# {{ end }}
-# {{ if or ( env "PROXY_UPSTREAMS_HTTPS" ) ( env "PROXY_UPSTREAMS_SMTPS" ) ( env "PROXY_UPSTREAMS_SMTP_STARTTLS" ) }}
+# {{ if env "PROXY_UPSTREAMS" }}
 tcp:
   routers:
-    # {{ range $i, $v := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS_HTTPS" ) -1 | compact }}
-    proxy-https-{{ $v }}:
-      rule: 'HostSNI(`{{ $v }}`)'
-      entryPoints: ["https"]
-      service: "proxy-https-{{ $v }}"
-      tls: { passthrough: true }
-    # {{ end }}
-    # {{ range $i, $v := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS_SMTPS" ) -1 | compact }}
-    proxy-smtps-{{ $v }}:
-      rule: 'HostSNI(`{{ $v }}`)'
-      entryPoints: ["smtps"]
-      service: "proxy-smtps-{{ $v }}"
-      tls: { passthrough: true }
-    # {{ end }}
-    # {{ range $i, $v := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS_SMTP_STARTTLS" ) -1 | compact }}
-    # NOTICE: this only supports a single host, as Traefik does not yet support SMTP with StartTLS.
-    proxy-smtp-starttls-{{ $v }}:
+  # {{ range $index, $value := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS" ) -1 | compact }}
+    # {{ $upstream := regexSplit ":" $value -1 }}
+    # {{ $host := index $upstream 0 }}
+    # {{ $port := index $upstream 1 }}
+    # {{ if gt ( len $upstream ) 2 }}
+      # {{ $type := index $upstream 2 }}
+    proxy-{{ $host }}-{{ $port }}-{{ $type }}:
+      # {{ if eq $type "catchall" }}
       rule: 'HostSNI(`*`)'
-      entryPoints: ["smtp-starttls"]
-      service: "proxy-smtp-starttls-{{ $v }}"
-      # tls: { passthrough: true }
+      entryPoints: ["port{{ $port }}"]
+      service: "proxy-{{ $host }}-{{ $port }}"
+      # {{ else }}
+        # {{ fail ( cat "Invalid type:" $type ) }}
+      # {{ end }}
+    # {{ else }}
+    proxy-{{ $host }}-{{ $port }}:
+      rule: 'HostSNI(`{{ $host }}`)'
+      entryPoints: ["port{{ $port }}"]
+      service: "proxy-{{ $host }}-{{ $port }}"
+      tls: { passthrough: true }
     # {{ end }}
+  # {{ end }}
   services:
-    # {{ range $i, $v := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS_HTTPS" ) -1 | compact }}
-    proxy-https-{{ $v }}:
+  # {{ range $index, $value := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS" ) -1 | compact }}
+    # {{ $upstream := regexSplit ":" $value -1 }}
+    # {{ $host := index $upstream 0 }}
+    # {{ $port := index $upstream 1 }}
+    proxy-{{ $host }}-{{ $port }}:
       loadBalancer:
-        servers: [{ address: "{{ $v }}:443" }]
-    # {{ end }}
-    # {{ range $i, $v := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS_SMTPS" ) -1 | compact }}
-    proxy-smtps-{{ $v }}:
-      loadBalancer:
-        servers: [{ address: "{{ $v }}:465" }]
-    # {{ end }}
-    # {{ range $i, $v := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS_SMTP_STARTTLS" ) -1 | compact }}
-    proxy-smtp-starttls-{{ $v }}:
-      loadBalancer:
-        servers: [{ address: "{{ $v }}:587" }]
-    # {{ end }}
+        servers: [{ address: "{{ $host }}:{{ $port }}" }]
+  # {{ end }}
 # {{ end }}
