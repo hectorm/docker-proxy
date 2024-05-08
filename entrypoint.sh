@@ -15,7 +15,7 @@ fi
 
 # Define the Traefik entrypoints.
 _IFS=${IFS}; IFS=",$(printf '\nx')"; IFS=${IFS%x}
-for upstream in ${PROXY_UPSTREAMS?}; do
+for upstream in ${PROXY_UPSTREAMS:-}; do
 	port=$(printf '%s' "${upstream:?}" | cut -d: -f2)
 
 	export "TRAEFIK_ENTRYPOINTS_port${port:?}"="true"
