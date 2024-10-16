@@ -2,8 +2,8 @@
 
 FROM docker.io/traefik:3.1.6@sha256:f703a2ac2ddf75f6e06c9cccac7f158765e2ab42d642b04e79e2e3d7355c2ddc
 
-COPY ./config/traefik/ /etc/traefik/
-COPY ./entrypoint.sh /entrypoint.sh
+COPY --chown=0:0 --chmod=644 ./config/traefik/dynamic/proxy.yml /etc/traefik/dynamic/proxy.yml
+COPY --chown=0:0 --chmod=755 ./entrypoint.sh /entrypoint.sh
 
 ENV RESOLVCONF_PATH=/etc/resolv.conf
 ENV RESOLVCONF_NAMESERVER_1=1.0.0.1
