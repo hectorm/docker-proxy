@@ -1,36 +1,66 @@
 # yaml-language-server: $schema=https://json.schemastore.org/traefik-v2-file-provider.json
-# {{ if env "PROXY_UPSTREAMS" }}
+# {{ if regexMatch ":(tcp|tls)([ \n\t,]|$)" ( env "PROXY_UPSTREAMS" ) }}
 tcp:
   routers:
-  # {{ range $index, $value := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS" ) -1 | compact }}
+  # {{ range $index, $value := regexSplit "[ \n\t,]+" ( env "PROXY_UPSTREAMS" ) -1 | compact }}
     # {{ $upstream := regexSplit ":" $value -1 }}
     # {{ $host := index $upstream 0 }}
     # {{ $port := index $upstream 1 }}
-    # {{ if gt ( len $upstream ) 2 }}
-      # {{ $type := index $upstream 2 }}
-    proxy-{{ $host }}-{{ $port }}-{{ $type }}:
-      # {{ if eq $type "catchall" }}
-      rule: 'HostSNI(`*`)'
-      entryPoints: ["port{{ $port }}"]
-      service: "proxy-{{ $host }}-{{ $port }}"
-      # {{ else }}
-        # {{ fail ( cat "Invalid type:" $type ) }}
-      # {{ end }}
-    # {{ else }}
-    proxy-{{ $host }}-{{ $port }}:
+    # {{ $kind := index $upstream 2 }}
+    # {{ if eq $kind "tls" }}
+    proxy-{{ $host }}-{{ $port }}-tls:
       rule: 'HostSNI(`{{ $host }}`)'
-      entryPoints: ["port{{ $port }}"]
-      service: "proxy-{{ $host }}-{{ $port }}"
+      entryPoints: ["proxy{{ $port }}tcp"]
+      service: "proxy-{{ $host }}-{{ $port }}-tcp"
       tls: { passthrough: true }
+    # {{ else if eq $kind "tcp" }}
+    proxy-{{ $port }}-tcp:
+      rule: 'HostSNI(`*`)'
+      entryPoints: ["proxy{{ $port }}tcp"]
+      service: "proxy-{{ $port }}-tcp"
     # {{ end }}
   # {{ end }}
   services:
-  # {{ range $index, $value := regexSplit "[,\n]+" ( env "PROXY_UPSTREAMS" ) -1 | compact }}
+  # {{ range $index, $value := regexSplit "[ \n\t,]+" ( env "PROXY_UPSTREAMS" ) -1 | compact }}
     # {{ $upstream := regexSplit ":" $value -1 }}
     # {{ $host := index $upstream 0 }}
     # {{ $port := index $upstream 1 }}
-    proxy-{{ $host }}-{{ $port }}:
+    # {{ $kind := index $upstream 2 }}
+    # {{ if eq $kind "tls" }}
+    proxy-{{ $host }}-{{ $port }}-tcp:
       loadBalancer:
         servers: [{ address: "{{ $host }}:{{ $port }}" }]
+    # {{ else if eq $kind "tcp" }}
+    proxy-{{ $port }}-tcp:
+      loadBalancer:
+        servers: [{ address: "{{ $host }}:{{ $port }}" }]
+    # {{ end }}
+  # {{ end }}
+# {{ end }}
+# {{ if regexMatch ":(udp)([ \n\t,]|$)" ( env "PROXY_UPSTREAMS" ) }}
+udp:
+  routers:
+  # {{ range $index, $value := regexSplit "[ \n\t,]+" ( env "PROXY_UPSTREAMS" ) -1 | compact }}
+    # {{ $upstream := regexSplit ":" $value -1 }}
+    # {{ $host := index $upstream 0 }}
+    # {{ $port := index $upstream 1 }}
+    # {{ $kind := index $upstream 2 }}
+    # {{ if eq $kind "udp" }}
+    proxy-{{ $port }}-udp:
+      entryPoints: ["proxy{{ $port }}udp"]
+      service: "proxy-{{ $port }}-udp"
+    # {{ end }}
+  # {{ end }}
+  services:
+  # {{ range $index, $value := regexSplit "[ \n\t,]+" ( env "PROXY_UPSTREAMS" ) -1 | compact }}
+    # {{ $upstream := regexSplit ":" $value -1 }}
+    # {{ $host := index $upstream 0 }}
+    # {{ $port := index $upstream 1 }}
+    # {{ $kind := index $upstream 2 }}
+    # {{ if eq $kind "udp" }}
+    proxy-{{ $port }}-udp:
+      loadBalancer:
+        servers: [{ address: "{{ $host }}:{{ $port }}" }]
+    # {{ end }}
   # {{ end }}
 # {{ end }}

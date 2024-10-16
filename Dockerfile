@@ -21,14 +21,29 @@ HEALTHCHECK --start-period=30s --interval=10s --timeout=5s --retries=1 CMD ["tra
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["traefik"]
 
-RUN set -eu \
-	&& apk add --no-cache curl openssl \
-	&& { printf '%s\n' '========== START OF TEST RUN =========='; set -x; } \
-	&& { PROXY_UPSTREAMS=google.com:443,smtp.gmail.com:465,smtp.gmail.com:587:catchall /entrypoint.sh traefik & } \
-	&& timeout 120 sh -euc 'sleep 1; until traefik healthcheck; do sleep 1; done' \
-	&& [ "$(curl -IL -sSo /dev/stderr -w '%{http_code}' --connect-to github.com:443:127.0.0.1:443 https://github.com)" = 000 ] \
-	&& [ "$(curl -IL -sSo /dev/stderr -w '%{http_code}' --connect-to google.com:443:127.0.0.1:443 https://google.com)" = 200 ] \
-	&& { printf 'QUIT\r\n' | openssl s_client -servername smtp.gmail.com -connect 127.0.0.1:465 -brief 1>&2; } \
-	&& { printf 'QUIT\r\n' | openssl s_client -servername smtp.gmail.com -connect 127.0.0.1:587 -starttls smtp -brief 1>&2; } \
-	&& { set +x; printf '%s\n' '========== END OF TEST RUN =========='; } \
-	&& apk del --no-cache curl
+RUN sh -eu <<-'EOF'
+	apk add --no-cache curl knot-utils openssl
+	{ printf '%s\n' '========== START OF TEST RUN =========='; set -x; }
+	PROXY_UPSTREAMS='
+		google.com:443:tls,
+		smtp.gmail.com:465:tls,
+		smtp.gmail.com:587:tcp,
+		1.1.1.1:53:udp,
+		1.1.1.1:53:tcp,
+		1.1.1.1:853:tls,
+		dns0.eu:853:tls,
+		dns0.eu:853:udp
+	' /entrypoint.sh traefik &
+	timeout 120 sh -euc 'sleep 1; until traefik healthcheck; do sleep 1; done'
+	[ "$(curl -IL -sSo /dev/stderr -w '%{http_code}' --connect-to github.com:443:127.0.0.1:443 https://github.com)" = 000 ]
+	[ "$(curl -IL -sSo /dev/stderr -w '%{http_code}' --connect-to google.com:443:127.0.0.1:443 https://google.com)" = 200 ]
+	printf 'QUIT\r\n' | openssl s_client -servername smtp.gmail.com -connect 127.0.0.1:465 -verify_return_error -brief
+	printf 'QUIT\r\n' | openssl s_client -servername smtp.gmail.com -connect 127.0.0.1:587 -verify_return_error -brief -starttls smtp
+	kdig @127.0.0.1:53 google.com
+	kdig @127.0.0.1:53 +tcp google.com
+	kdig @127.0.0.1:853 +tls +tls-host=1.1.1.1 google.com
+	kdig @127.0.0.1:853 +tls +tls-host=dns0.eu google.com
+	kdig @127.0.0.1:853 +quic +tls-host=dns0.eu google.com
+	{ set +x; printf '%s\n' '========== END OF TEST RUN =========='; }
+	apk del curl knot-utils openssl
+EOF

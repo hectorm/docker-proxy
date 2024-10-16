@@ -14,12 +14,19 @@ if [ -n "${RESOLVCONF_PATH:-}" ] && touch "${RESOLVCONF_PATH:?}" 2>/dev/null; th
 fi
 
 # Define the Traefik entrypoints.
-_IFS=${IFS}; IFS=",$(printf '\nx')"; IFS=${IFS%x}
+_IFS=${IFS}; IFS="$(printf ' \t\n,')";
 for upstream in ${PROXY_UPSTREAMS:-}; do
 	port=$(printf '%s' "${upstream:?}" | cut -d: -f2)
+	kind=$(printf '%s' "${upstream:?}" | cut -d: -f3)
 
-	export "TRAEFIK_ENTRYPOINTS_port${port:?}"="true"
-	export "TRAEFIK_ENTRYPOINTS_port${port:?}_ADDRESS"=":${port:?}/tcp"
+	case "${kind:?}" in
+		"tcp"|"tls") proto='tcp' ;;
+		"udp") proto='udp' ;;
+		*) printf "Invalid kind: %s\n" "${kind:?}" >&2; exit 1 ;;
+	esac
+
+	export "TRAEFIK_ENTRYPOINTS_proxy${port:?}${proto:?}"="true"
+	export "TRAEFIK_ENTRYPOINTS_proxy${port:?}${proto:?}_ADDRESS"=":${port:?}/${proto:?}"
 done
 IFS=$_IFS
 
