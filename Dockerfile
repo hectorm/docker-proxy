@@ -17,6 +17,8 @@ ENV TRAEFIK_PROVIDERS_FILE_WATCH=false
 ENV TRAEFIK_API=false
 ENV TRAEFIK_PING=true
 
+ENV PROXY_HTTP_TO_HTTPS_REDIRECT=true
+
 HEALTHCHECK --start-period=30s --interval=10s --timeout=5s --retries=1 CMD ["traefik", "healthcheck"]
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["traefik"]
@@ -35,8 +37,10 @@ RUN sh -eu <<-'EOF'
 		dns0.eu:853:udp
 	' /entrypoint.sh traefik &
 	timeout 120 sh -euc 'sleep 1; until traefik healthcheck; do sleep 1; done'
-	[ "$(curl -IL -sSo /dev/stderr -w '%{http_code}' --connect-to github.com:443:127.0.0.1:443 https://github.com)" = 000 ]
-	[ "$(curl -IL -sSo /dev/stderr -w '%{http_code}' --connect-to google.com:443:127.0.0.1:443 https://google.com)" = 200 ]
+	[ "$(curl -kvIL -sSo /dev/stderr -w '%{http_code}' --resolve github.com:443:127.0.0.1 https://github.com)" = 404 ]
+	[ "$(curl -kvIL -sSo /dev/stderr -w '%{http_code}' --resolve github.com:443:127.0.0.1 --resolve github.com:80:127.0.0.1 http://github.com)" = 404 ]
+	[ "$(curl -kvIL -sSo /dev/stderr -w '%{http_code}' --resolve google.com:443:127.0.0.1 https://google.com)" = 200 ]
+	[ "$(curl -kvIL -sSo /dev/stderr -w '%{http_code}' --resolve google.com:443:127.0.0.1 --resolve google.com:80:127.0.0.1 http://google.com)" = 200 ]
 	printf 'QUIT\r\n' | openssl s_client -servername smtp.gmail.com -connect 127.0.0.1:465 -verify_return_error -brief
 	printf 'QUIT\r\n' | openssl s_client -servername smtp.gmail.com -connect 127.0.0.1:587 -verify_return_error -brief -starttls smtp
 	kdig @127.0.0.1:53 google.com

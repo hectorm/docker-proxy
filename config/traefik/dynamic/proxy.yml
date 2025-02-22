@@ -64,3 +64,17 @@ udp:
     # {{ end }}
   # {{ end }}
 # {{ end }}
+# {{ if eq ( env "PROXY_HTTP_TO_HTTPS_REDIRECT" ) "true" }}
+http:
+  routers:
+    http-to-https-redirect:
+      rule: 'PathPrefix(`/`)'
+      entryPoints: ["http"]
+      middlewares: ["http-to-https-redirect"]
+      service: "noop@internal"
+  middlewares:
+    http-to-https-redirect:
+      redirectScheme:
+        scheme: "https"
+        permanent: true
+# {{ end }}

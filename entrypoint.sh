@@ -13,7 +13,7 @@ if [ -n "${RESOLVCONF_PATH:-}" ] && touch "${RESOLVCONF_PATH:?}" 2>/dev/null; th
 	EOF
 fi
 
-# Define the Traefik entrypoints.
+# Define the Traefik entrypoints for the proxy upstreams.
 _IFS=${IFS}; IFS="$(printf ' \t\n,')";
 for upstream in ${PROXY_UPSTREAMS:-}; do
 	port=$(printf '%s' "${upstream:?}" | cut -d: -f2)
@@ -29,6 +29,12 @@ for upstream in ${PROXY_UPSTREAMS:-}; do
 	export "TRAEFIK_ENTRYPOINTS_proxy${port:?}${proto:?}_ADDRESS"=":${port:?}/${proto:?}"
 done
 IFS=$_IFS
+
+# Define the Traefik entrypoint for HTTP to HTTPS redirection.
+if [ "${PROXY_HTTP_TO_HTTPS_REDIRECT:?}" = "true" ]; then
+	export TRAEFIK_ENTRYPOINTS_http="true"
+	export TRAEFIK_ENTRYPOINTS_http_ADDRESS=":80/tcp"
+fi
 
 # If the first arg is "-f" or "--some-option", or our command is a valid Traefik subcommand,
 # let's invoke it through Traefik instead.
