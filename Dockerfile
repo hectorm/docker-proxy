@@ -33,8 +33,8 @@ RUN sh -eu <<-'EOF'
 		1.1.1.1:53:udp,
 		1.1.1.1:53:tcp,
 		1.1.1.1:853:tls,
-		dns0.eu:853:tls,
-		dns0.eu:853:udp
+		dns.adguard-dns.com:853:tls,
+		dns.adguard-dns.com:853:udp
 	' /entrypoint.sh traefik &
 	timeout 120 sh -euc 'sleep 1; until traefik healthcheck; do sleep 1; done'
 	[ "$(curl -kvIL -sSo /dev/stderr -w '%{http_code}' --resolve github.com:443:127.0.0.1 https://github.com)" = 404 ]
@@ -46,8 +46,8 @@ RUN sh -eu <<-'EOF'
 	kdig @127.0.0.1:53 google.com
 	kdig @127.0.0.1:53 +tcp google.com
 	kdig @127.0.0.1:853 +tls +tls-host=1.1.1.1 google.com
-	kdig @127.0.0.1:853 +tls +tls-host=dns0.eu google.com
-	kdig @127.0.0.1:853 +quic +tls-host=dns0.eu google.com
+	kdig @127.0.0.1:853 +tls +tls-host=dns.adguard-dns.com google.com
+	kdig @127.0.0.1:853 +quic +tls-host=dns.adguard-dns.com google.com
 	{ set +x; printf '%s\n' '========== END OF TEST RUN =========='; }
 	apk del curl knot-utils openssl
 EOF
