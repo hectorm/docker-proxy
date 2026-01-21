@@ -1,6 +1,6 @@
 # syntax=docker.io/docker/dockerfile:1
 
-FROM docker.io/traefik:3.5.3@sha256:d6be8725d21b45bdd84b93ea01438256e0e3c94aa8fa51834fe87f37cd5d4af8
+FROM docker.io/traefik:3.6.7@sha256:ebe7d3fc715e28f033cea8265e9105b9d64705867f5b916e2d9ed0b62c530192
 
 COPY --chown=0:0 --chmod=644 ./config/traefik/dynamic/proxy.yml /etc/traefik/dynamic/proxy.yml
 COPY --chown=0:0 --chmod=755 ./entrypoint.sh /entrypoint.sh
