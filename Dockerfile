@@ -1,6 +1,6 @@
 # syntax=docker.io/docker/dockerfile:1
 
-FROM docker.io/traefik:3.6.7@sha256:ebe7d3fc715e28f033cea8265e9105b9d64705867f5b916e2d9ed0b62c530192
+FROM docker.io/traefik:3.7.17@sha256:30ff62491aacdb862ceb8c9edcf2627da638d7deafdd4b6dab32fe34f8aa3e90
 
 COPY --chown=0:0 --chmod=644 ./config/traefik/dynamic/proxy.yml /etc/traefik/dynamic/proxy.yml
 COPY --chown=0:0 --chmod=755 ./entrypoint.sh /entrypoint.sh
@@ -12,6 +12,7 @@ ENV RESOLVCONF_NAMESERVER_3=8.8.8.8
 
 ENV TRAEFIK_GLOBAL_CHECKNEWVERSION=false
 ENV TRAEFIK_GLOBAL_SENDANONYMOUSUSAGE=false
+ENV TRAEFIK_GLOBAL_ALIASHEADERSSTRATEGY=delete
 ENV TRAEFIK_PROVIDERS_FILE_DIRECTORY=/etc/traefik/dynamic/
 ENV TRAEFIK_PROVIDERS_FILE_WATCH=false
 ENV TRAEFIK_API=false
