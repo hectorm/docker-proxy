@@ -2,7 +2,7 @@
 
 FROM docker.io/traefik:3.7.17@sha256:30ff62491aacdb862ceb8c9edcf2627da638d7deafdd4b6dab32fe34f8aa3e90
 
-COPY --chown=0:0 --chmod=644 ./config/traefik/dynamic/proxy.yml /etc/traefik/dynamic/proxy.yml
+COPY --chown=0:0 --chmod=u=rwX,go=rX ./config/traefik/dynamic/proxy.yml /etc/traefik/dynamic/proxy.yml
 COPY --chown=0:0 --chmod=755 ./entrypoint.sh /entrypoint.sh
 
 ENV RESOLVCONF_PATH=/etc/resolv.conf
@@ -17,6 +17,7 @@ ENV TRAEFIK_PROVIDERS_FILE_DIRECTORY=/etc/traefik/dynamic/
 ENV TRAEFIK_PROVIDERS_FILE_WATCH=false
 ENV TRAEFIK_API=false
 ENV TRAEFIK_PING=true
+ENV TRAEFIK_ENTRYPOINTS_traefik_ADDRESS=:31080
 
 ENV PROXY_HTTP_TO_HTTPS_REDIRECT=true
 
@@ -27,7 +28,7 @@ CMD ["traefik"]
 RUN sh -eu <<-'EOF'
 	apk add --no-cache curl knot-utils openssl
 	{ printf '%s\n' '========== START OF TEST RUN =========='; set -x; }
-	PROXY_UPSTREAMS='
+	RESOLVCONF_PATH='' PROXY_UPSTREAMS='
 		google.com:443:tls,
 		smtp.gmail.com:465:tls,
 		smtp.gmail.com:587:tcp,

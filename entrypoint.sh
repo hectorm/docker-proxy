@@ -3,7 +3,11 @@
 set -eu
 
 # Overwrite the resolv.conf file.
-if [ -n "${RESOLVCONF_PATH:-}" ] && touch "${RESOLVCONF_PATH:?}" 2>/dev/null; then
+if [ -n "${RESOLVCONF_PATH:-}" ]; then
+	if ! touch "${RESOLVCONF_PATH:?}" 2>/dev/null; then
+		printf "Cannot write to %s, provide one with external nameservers and set RESOLVCONF_PATH to an empty value\n" "${RESOLVCONF_PATH:?}" >&2
+		exit 1
+	fi
 	sed '/^$/d' > "${RESOLVCONF_PATH:?}" <<-EOF
 		${RESOLVCONF_NAMESERVER_1:+nameserver ${RESOLVCONF_NAMESERVER_1:?}}
 		${RESOLVCONF_NAMESERVER_2:+nameserver ${RESOLVCONF_NAMESERVER_2:?}}
@@ -15,15 +19,21 @@ fi
 
 # Define the Traefik entrypoints for the proxy upstreams.
 _IFS=${IFS}; IFS="$(printf ' \t\n,')";
-for upstream in ${PROXY_UPSTREAMS:-}; do
+ids=''; for upstream in ${PROXY_UPSTREAMS:-}; do
 	port=$(printf '%s' "${upstream:?}" | cut -d: -f2)
 	kind=$(printf '%s' "${upstream:?}" | cut -d: -f3)
 
 	case "${kind:?}" in
-		"tcp"|"tls") proto='tcp' ;;
-		"udp") proto='udp' ;;
+		"tls") proto='tcp'; id="${upstream:?}" ;;
+		"tcp") proto='tcp'; id="${port:?}:${kind:?}" ;;
+		"udp") proto='udp'; id="${port:?}:${kind:?}" ;;
 		*) printf "Invalid kind: %s\n" "${kind:?}" >&2; exit 1 ;;
 	esac
+
+	case " ${ids} " in
+		*" ${id:?} "*) printf "Conflicting upstream: %s\n" "${upstream:?}" >&2; exit 1 ;;
+	esac
+	ids="${ids} ${id:?}"
 
 	export "TRAEFIK_ENTRYPOINTS_proxy${port:?}${proto:?}"="true"
 	export "TRAEFIK_ENTRYPOINTS_proxy${port:?}${proto:?}_ADDRESS"=":${port:?}/${proto:?}"
